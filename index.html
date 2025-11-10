@@ -417,6 +417,9 @@
             const input = document.getElementById('userInput');
             const userMessage = input.value.trim();
             
+            console.log("🚀 Submit button clicked");
+            console.log("User message:", userMessage);
+            
             if (!userMessage) {
                 alert('Please write your response before submitting.');
                 return;
@@ -430,7 +433,10 @@
             responseArea.innerHTML = '<div class="loading">Evaluating your decision and generating the next scenario...</div>';
 
             try {
+                console.log("📞 Calling API...");
                 const response = await callOllama(userMessage);
+                console.log("✅ API call complete");
+                
                 displayResponse(response);
                 
                 challengeNumber++;
@@ -438,6 +444,7 @@
                 
                 // Show metrics after first response
                 if (challengeNumber === 1) {
+                    console.log("👁️ Showing metrics dashboard");
                     document.getElementById('metricsDashboard').classList.remove('hidden');
                 }
                 
@@ -445,6 +452,7 @@
                 button.disabled = false;
                 button.textContent = challengeNumber === 0 ? 'Submit Management Plan' : 'Submit Your Solution';
             } catch (error) {
+                console.error("❌ Error in submitResponse:", error);
                 responseArea.innerHTML = `<div class="error">Error: ${error.message}. Please try again.</div>`;
                 button.disabled = false;
                 button.textContent = challengeNumber === 0 ? 'Submit Management Plan' : 'Submit Your Solution';
@@ -483,12 +491,14 @@ RESPONSE FORMAT (keep under 250 words):
 **New Situation:**
 [Describe the new challenge/scenario that has emerged. Make it feel like a real event in the project timeline]
 
-**Current Status:**
-Suggest realistic metric changes based on their solution:
-- Budget: [+/- amount] because [specific reason]
-- Timeline: [+/- amount] because [specific reason]  
-- Team Morale: [+/- amount] because [specific reason]
-- Quality: [+/- amount] because [specific reason]
+**METRICS:**
+YOU MUST include this exact section with these exact metric names:
+Budget: +5 (or -5, etc.) because [reason]
+Timeline: -3 because [reason]
+Team Morale: +8 because [reason]
+Quality: -2 because [reason]
+
+CRITICAL: The metrics MUST be formatted EXACTLY as shown above with the metric name, colon, space, then +/- number. This is required for the system to parse changes.
 
 Studio Context:
 - Name: ${currentStudio.name}
@@ -528,18 +538,29 @@ ${challengeNumber >= 9 ? 'This is the FINAL scenario. After this, provide a proj
 
             const data = await response.json();
             
+            console.log("🔍 Raw API response:", data);
+            
             let assistantMessage = "";
             if (data.message && data.message.content) {
                 assistantMessage = data.message.content;
+                console.log("📝 Extracted from data.message.content");
             } else if (data.content) {
                 assistantMessage = data.content;
+                console.log("📝 Extracted from data.content");
+            } else if (data.response) {
+                assistantMessage = data.response;
+                console.log("📝 Extracted from data.response");
             } else {
+                console.error("❌ Unexpected response format:", data);
                 throw new Error("Unexpected response format from API");
             }
+
+            console.log("📨 Assistant message:", assistantMessage);
 
             conversationHistory.push({ role: "assistant", content: assistantMessage });
             
             // Parse the AI's metric suggestions and update game state
+            console.log("🎯 Calling parseAndUpdateMetrics...");
             parseAndUpdateMetrics(assistantMessage);
 
             return assistantMessage;
@@ -549,47 +570,62 @@ ${challengeNumber >= 9 ? 'This is the FINAL scenario. After this, provide a proj
             // Store previous state for change calculation
             previousState = {...gameState};
             
-            // Look for metric changes in the AI response with more flexible patterns
-            const budgetMatch = aiResponse.match(/Budget:?\s*([+-]?\d+)/i);
-            const timelineMatch = aiResponse.match(/Timeline:?\s*([+-]?\d+)/i);
-            const moraleMatch = aiResponse.match(/(?:Team )?Morale:?\s*([+-]?\d+)/i);
-            const qualityMatch = aiResponse.match(/Quality:?\s*([+-]?\d+)/i);
+            console.log("=== PARSING METRICS ===");
+            console.log("Full AI Response:", aiResponse);
+            
+            // Look for metric changes - try multiple patterns
+            let budgetMatch = aiResponse.match(/Budget:\s*([+-]?\d+)/i);
+            let timelineMatch = aiResponse.match(/Timeline:\s*([+-]?\d+)/i);
+            let moraleMatch = aiResponse.match(/(?:Team )?Morale:\s*([+-]?\d+)/i);
+            let qualityMatch = aiResponse.match(/Quality:\s*([+-]?\d+)/i);
 
-            console.log("Parsing metrics from AI response:");
-            console.log("Budget match:", budgetMatch);
-            console.log("Timeline match:", timelineMatch);
-            console.log("Morale match:", moraleMatch);
-            console.log("Quality match:", qualityMatch);
+            console.log("Matches found:");
+            console.log("Budget:", budgetMatch);
+            console.log("Timeline:", timelineMatch);
+            console.log("Morale:", moraleMatch);
+            console.log("Quality:", qualityMatch);
+
+            let changesApplied = false;
 
             if (budgetMatch) {
                 const change = parseInt(budgetMatch[1]);
                 gameState.budget = Math.max(0, Math.min(100, gameState.budget + change));
-                console.log(`Budget changed by ${change} to ${gameState.budget}`);
+                console.log(`✅ Budget changed by ${change} to ${gameState.budget}`);
+                changesApplied = true;
             }
             if (timelineMatch) {
                 const change = parseInt(timelineMatch[1]);
                 gameState.timeline = Math.max(0, Math.min(100, gameState.timeline + change));
-                console.log(`Timeline changed by ${change} to ${gameState.timeline}`);
+                console.log(`✅ Timeline changed by ${change} to ${gameState.timeline}`);
+                changesApplied = true;
             }
             if (moraleMatch) {
                 const change = parseInt(moraleMatch[1]);
                 gameState.morale = Math.max(0, Math.min(100, gameState.morale + change));
-                console.log(`Morale changed by ${change} to ${gameState.morale}`);
+                console.log(`✅ Morale changed by ${change} to ${gameState.morale}`);
+                changesApplied = true;
             }
             if (qualityMatch) {
                 const change = parseInt(qualityMatch[1]);
                 gameState.quality = Math.max(0, Math.min(100, gameState.quality + change));
-                console.log(`Quality changed by ${change} to ${gameState.quality}`);
+                console.log(`✅ Quality changed by ${change} to ${gameState.quality}`);
+                changesApplied = true;
             }
 
-            // If no matches found, apply small random changes so metrics don't stay static
-            if (!budgetMatch && !timelineMatch && !moraleMatch && !qualityMatch) {
-                console.log("No metric changes detected in AI response, applying random variations");
+            // If no matches found, apply small random changes
+            if (!changesApplied) {
+                console.log("⚠️ No metric changes detected in AI response, applying random variations");
                 gameState.budget = Math.max(0, Math.min(100, gameState.budget + (Math.floor(Math.random() * 11) - 5)));
                 gameState.timeline = Math.max(0, Math.min(100, gameState.timeline + (Math.floor(Math.random() * 11) - 5)));
                 gameState.morale = Math.max(0, Math.min(100, gameState.morale + (Math.floor(Math.random() * 11) - 5)));
                 gameState.quality = Math.max(0, Math.min(100, gameState.quality + (Math.floor(Math.random() * 11) - 5)));
             }
+
+            console.log("=== FINAL STATE ===");
+            console.log("Budget:", gameState.budget);
+            console.log("Timeline:", gameState.timeline);
+            console.log("Morale:", gameState.morale);
+            console.log("Quality:", gameState.quality);
 
             updateMetricsDisplay();
         }
