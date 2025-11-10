@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Industry PM Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            min-height: 500px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .studio-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .dossier {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .dossier h2 {
+            color: #667eea;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .dossier-item {
+            margin: 12px 0;
+            line-height: 1.6;
+        }
+        
+        .dossier-item strong {
+            color: #555;
+            display: inline-block;
+            min-width: 120px;
+        }
+        
+        .prompt-section {
+            margin: 30px 0;
+        }
+        
+        .prompt-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 15px;
+        }
+        
+        .button:hover {
+            background: #5568d3;
+        }
+        
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .response-section {
+            margin-top: 30px;
+            padding: 25px;
+            background: #f0f7ff;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .response-section h3 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-style: italic;
+        }
+        
+        .challenge-counter {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #c62828;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Game Industry Project Management Simulation</h1>
+            <div class="studio-badge" id="studioBadge"></div>
+        </div>
+        
+        <div class="challenge-counter hidden" id="challengeCounter"></div>
+        
+        <div id="content"></div>
+        
+        <div id="responseArea"></div>
+    </div>
+
+    <script>
+        // IMPORTANT: Replace this with your actual Render URL
+        const API_URL = "https://pm-sim.onrender.com/chat";
+        
+        const studios = [
+            {
+                name: "Titan Games Studios",
+                type: "AAA Studio",
+                description: "A subsidiary of a major publisher with 300+ employees",
+                details: {
+                    size: "Large (300+ employees across multiple departments)",
+                    budget: "High ($50-100M per project)",
+                    culture: "Corporate, process-heavy, risk-averse with established hierarchies",
+                    currentProject: "Third installment in a successful action-adventure franchise",
+                    stakeholders: "Publisher executives, marketing team, shareholders, large fanbase",
+                    constraints: "Strict milestones, publisher approval needed for major decisions, high expectations",
+                    pastChallenges: "Previous game had crunch issues and missed initial launch date"
+                }
+            },
+            {
+                name: "Pixel Dreams",
+                type: "Indie Studio",
+                description: "A small independent studio with big creative ambitions",
+                details: {
+                    size: "Small (8 people - 2 programmers, 2 artists, 1 designer, 1 audio, 2 founders)",
+                    budget: "Limited ($500K self-funded + small grants)",
+                    culture: "Flat structure, creative freedom, collaborative, everyone wears multiple hats",
+                    currentProject: "Narrative-driven puzzle game for PC and consoles",
+                    stakeholders: "Founders, small publisher for distribution, early access community",
+                    constraints: "Tight budget, limited resources, some team members work part-time",
+                    pastChallenges: "First game was critically acclaimed but didn't sell well initially"
+                }
+            },
+            {
+                name: "Velocity Interactive",
+                type: "Mid-Tier Studio",
+                description: "A growing studio transitioning from indie success to bigger projects",
+                details: {
+                    size: "Medium (45 employees, recently expanded from 15)",
+                    budget: "Moderate ($8-12M, backed by private investors)",
+                    culture: "Startup mentality meeting corporate structure - growing pains evident",
+                    currentProject: "Multiplayer action game with live service elements",
+                    stakeholders: "Angel investors, platform holders (Sony/Microsoft/Steam), growing player community",
+                    constraints: "Investor pressure for ROI, scaling team rapidly, maintaining quality during growth",
+                    pastChallenges: "Previous hit game created unsustainable expectations; high employee turnover"
+                }
+            },
+            {
+                name: "DataPlay Mobile",
+                type: "Mobile/Live Service Studio",
+                description: "A mobile-first studio focused on free-to-play games",
+                details: {
+                    size: "Medium (60 employees - heavy on analytics and live ops)",
+                    budget: "Moderate but highly metrics-driven allocation",
+                    culture: "Data-driven, fast iteration, A/B testing everything, player retention obsessed",
+                    currentProject: "Match-3 puzzle game with social and gacha mechanics",
+                    stakeholders: "Players (millions of DAU), app store partners, UA team, investors watching KPIs",
+                    constraints: "Must hit specific retention/monetization metrics, weekly content updates required",
+                    pastChallenges: "Previous game succeeded initially but retention dropped after month 3"
+                }
+            },
+            {
+                name: "BlueSky Studios",
+                type: "Work-for-Hire Studio",
+                description: "A contract studio creating games for other companies",
+                details: {
+                    size: "Medium (75 employees, organized in project pods)",
+                    budget: "Fixed client contracts with limited flexibility",
+                    culture: "Professional, deadline-focused, client service oriented, portfolio diversity",
+                    currentProject: "Licensed mobile game based on a popular film franchise",
+                    stakeholders: "Client company, IP licensor, end platform, your studio leadership",
+                    constraints: "Fixed scope and timeline in contract, client approval required for all changes, IP restrictions",
+                    pastChallenges: "Lost a major client last year due to missed milestones; team morale affected"
+                }
+            }
+        ];
+
+        let currentStudio;
+        let conversationHistory = [];
+        let challengeNumber = 0;
+        let gameState = {
+            budget: 100,
+            timeline: 100,
+            morale: 100,
+            quality: 100
+        };
+
+        function init() {
+            currentStudio = studios[Math.floor(Math.random() * studios.length)];
+            document.getElementById('studioBadge').textContent = currentStudio.type;
+            showInitialDossier();
+        }
+
+        function showInitialDossier() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="dossier">
+                    <h2>Welcome to ${currentStudio.name}</h2>
+                    <p style="margin-bottom: 20px; font-style: italic;">${currentStudio.description}</p>
+                    
+                    <div class="dossier-item"><strong>Studio Size:</strong> ${currentStudio.details.size}</div>
+                    <div class="dossier-item"><strong>Budget:</strong> ${currentStudio.details.budget}</div>
+                    <div class="dossier-item"><strong>Culture:</strong> ${currentStudio.details.culture}</div>
+                    <div class="dossier-item"><strong>Current Project:</strong> ${currentStudio.details.currentProject}</div>
+                    <div class="dossier-item"><strong>Key Stakeholders:</strong> ${currentStudio.details.stakeholders}</div>
+                    <div class="dossier-item"><strong>Constraints:</strong> ${currentStudio.details.constraints}</div>
+                    <div class="dossier-item"><strong>Past Challenges:</strong> ${currentStudio.details.pastChallenges}</div>
+                </div>
+                
+                <div class="prompt-section">
+                    <h3>Your First Task</h3>
+                    <p style="margin-bottom: 15px; color: #555;">
+                        Based on what you know about ${currentStudio.name}, write a brief outline of your management approach for this project. 
+                        Consider the studio's culture, resources, and constraints. (3-5 sentences)
+                    </p>
+                    <textarea id="userInput" placeholder="Describe your management approach here..."></textarea>
+                    <br>
+                    <button class="button" onclick="submitResponse()">Submit Management Plan</button>
+                </div>
+            `;
+        }
+
+        async function submitResponse() {
+            const input = document.getElementById('userInput');
+            const userMessage = input.value.trim();
+            
+            if (!userMessage) {
+                alert('Please write your response before submitting.');
+                return;
+            }
+
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = 'Processing...';
+            
+            const responseArea = document.getElementById('responseArea');
+            responseArea.innerHTML = '<div class="loading">AI is evaluating your response and generating the next scenario...</div>';
+
+            try {
+                const response = await callOllama(userMessage);
+                displayResponse(response);
+                
+                challengeNumber++;
+                updateChallengeCounter();
+                
+                input.value = '';
+                button.disabled = false;
+                button.textContent = challengeNumber === 0 ? 'Submit Management Plan' : 'Submit Decision';
+            } catch (error) {
+                responseArea.innerHTML = `<div class="error">Error: ${error.message}. Please try again.</div>`;
+                button.disabled = false;
+                button.textContent = challengeNumber === 0 ? 'Submit Management Plan' : 'Submit Decision';
+            }
+        }
+
+        function updateChallengeCounter() {
+            const counter = document.getElementById('challengeCounter');
+            if (challengeNumber > 0 && challengeNumber <= 9) {
+                counter.classList.remove('hidden');
+                counter.textContent = `Challenge ${challengeNumber} of 9`;
+            } else if (challengeNumber > 9) {
+                counter.textContent = 'Final Results';
+            }
+        }
+
+        async function callOllama(userMessage) {
+            conversationHistory.push({ role: "user", content: userMessage });
+
+            const systemPrompt = `You are an interactive project-management sim for a GAME STUDIO, written like a narrative event log (think Oregon Trail, but for game dev).
+You ALWAYS:
+1. Start with a short scene header like: "Sprint ${challengeNumber + 1}, Tuesday, Art Block A".
+2. Describe CONSEQUENCES of the student's previous choice on budget, morale, timeline, and quality (even if small).
+3. Present a new dilemma tied to real game-dev constraints (producers, marketing, engine issues, cut features, milestone with publisher).
+4. Offer EXACTLY THREE numbered choices the student can pick (1, 2, or 3). Each must have a clear tradeoff.
+5. Stay under ~280 words total so it fits on screen.
+
+You have studio context:
+- Name: ${currentStudio.name}
+- Type: ${currentStudio.type}
+- Size: ${currentStudio.details.size}
+- Budget: ${currentStudio.details.budget}
+- Culture: ${currentStudio.details.culture}
+- Project: ${currentStudio.details.currentProject}
+- Stakeholders: ${currentStudio.details.stakeholders}
+- Constraints: ${currentStudio.details.constraints}
+- Past Challenges: ${currentStudio.details.pastChallenges}
+
+Current meters (0-100):
+- Budget: ${gameState.budget}
+- Timeline: ${gameState.timeline}
+- Team Morale: ${gameState.morale}
+- Quality: ${gameState.quality}
+
+If this is the FINAL challenge (10), give a short debrief + project postmortem instead of 3 choices.`;
+
+            // Use the messages format that your proxy expects
+            const messages = [
+                { role: "user", content: systemPrompt + "\n\nUser's response: " + userMessage }
+            ];
+
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model: "gpt-oss:120b-cloud",
+                    messages: messages
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API request failed: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+            
+            // Extract the assistant's message from the response
+            let assistantMessage = "";
+            if (data.message && data.message.content) {
+                assistantMessage = data.message.content;
+            } else if (data.content) {
+                assistantMessage = data.content;
+            } else {
+                throw new Error("Unexpected response format from API");
+            }
+
+            conversationHistory.push({ role: "assistant", content: assistantMessage });
+            updateGameState();
+
+            return assistantMessage;
+        }
+
+        function updateGameState() {
+            // Simple random fluctuations to simulate consequences
+            gameState.budget += Math.floor(Math.random() * 20) - 10;
+            gameState.timeline += Math.floor(Math.random() * 20) - 10;
+            gameState.morale += Math.floor(Math.random() * 20) - 10;
+            gameState.quality += Math.floor(Math.random() * 20) - 10;
+
+            // Keep values in bounds
+            gameState.budget = Math.max(0, Math.min(100, gameState.budget));
+            gameState.timeline = Math.max(0, Math.min(100, gameState.timeline));
+            gameState.morale = Math.max(0, Math.min(100, gameState.morale));
+            gameState.quality = Math.max(0, Math.min(100, gameState.quality));
+        }
+
+        function displayResponse(response) {
+            const responseArea = document.getElementById('responseArea');
+            const formattedResponse = response.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+            
+            responseArea.innerHTML = `
+                <div class="response-section">
+                    <h3>Scenario Update</h3>
+                    <p>${formattedResponse}</p>
+                </div>
+            `;
+
+            if (challengeNumber < 9) {
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <div class="prompt-section">
+                        <h3>Your Response</h3>
+                        <p style="margin-bottom: 15px; color: #555;">
+                            How do you respond to this situation? Explain your decision and reasoning.
+                        </p>
+                        <textarea id="userInput" placeholder="Describe your decision and approach..."></textarea>
+                        <br>
+                        <button class="button" onclick="submitResponse()">Submit Decision</button>
+                    </div>
+                `;
+            } else if (challengeNumber === 9) {
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <div style="text-align: center; padding: 40px; background: #f0f7ff; border-radius: 8px; margin-top: 20px;">
+                        <h2 style="color: #667eea; margin-bottom: 20px;">Simulation Complete!</h2>
+                        <p style="color: #555; line-height: 1.6;">
+                            You've navigated through the challenges of managing a project at ${currentStudio.name}. 
+                            Review the debrief above to see how you did and what you learned about project management in the games industry.
+                        </p>
+                        <button class="button" onclick="location.reload()" style="margin-top: 20px;">Start New Simulation</button>
+                    </div>
+                `;
+            }
+
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        // Initialize the game when page loads
+        window.onload = init;
+    </script>
+</body>
+</html>
