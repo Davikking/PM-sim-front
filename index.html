@@ -430,9 +430,6 @@
             responseArea.innerHTML = '<div class="loading">Evaluating your decision and generating the next scenario...</div>';
 
             try {
-                // Store previous state before making the call
-                previousState = {...gameState};
-                
                 const response = await callOllama(userMessage);
                 displayResponse(response);
                 
@@ -549,16 +546,50 @@ ${challengeNumber >= 9 ? 'This is the FINAL scenario. After this, provide a proj
         }
 
         function parseAndUpdateMetrics(aiResponse) {
-            // Look for metric changes in the AI response
-            const budgetMatch = aiResponse.match(/Budget:?\s*([+-]\d+)/i);
-            const timelineMatch = aiResponse.match(/Timeline:?\s*([+-]\d+)/i);
-            const moraleMatch = aiResponse.match(/(?:Team )?Morale:?\s*([+-]\d+)/i);
-            const qualityMatch = aiResponse.match(/Quality:?\s*([+-]\d+)/i);
+            // Store previous state for change calculation
+            previousState = {...gameState};
+            
+            // Look for metric changes in the AI response with more flexible patterns
+            const budgetMatch = aiResponse.match(/Budget:?\s*([+-]?\d+)/i);
+            const timelineMatch = aiResponse.match(/Timeline:?\s*([+-]?\d+)/i);
+            const moraleMatch = aiResponse.match(/(?:Team )?Morale:?\s*([+-]?\d+)/i);
+            const qualityMatch = aiResponse.match(/Quality:?\s*([+-]?\d+)/i);
 
-            if (budgetMatch) gameState.budget = Math.max(0, Math.min(100, gameState.budget + parseInt(budgetMatch[1])));
-            if (timelineMatch) gameState.timeline = Math.max(0, Math.min(100, gameState.timeline + parseInt(timelineMatch[1])));
-            if (moraleMatch) gameState.morale = Math.max(0, Math.min(100, gameState.morale + parseInt(moraleMatch[1])));
-            if (qualityMatch) gameState.quality = Math.max(0, Math.min(100, gameState.quality + parseInt(qualityMatch[1])));
+            console.log("Parsing metrics from AI response:");
+            console.log("Budget match:", budgetMatch);
+            console.log("Timeline match:", timelineMatch);
+            console.log("Morale match:", moraleMatch);
+            console.log("Quality match:", qualityMatch);
+
+            if (budgetMatch) {
+                const change = parseInt(budgetMatch[1]);
+                gameState.budget = Math.max(0, Math.min(100, gameState.budget + change));
+                console.log(`Budget changed by ${change} to ${gameState.budget}`);
+            }
+            if (timelineMatch) {
+                const change = parseInt(timelineMatch[1]);
+                gameState.timeline = Math.max(0, Math.min(100, gameState.timeline + change));
+                console.log(`Timeline changed by ${change} to ${gameState.timeline}`);
+            }
+            if (moraleMatch) {
+                const change = parseInt(moraleMatch[1]);
+                gameState.morale = Math.max(0, Math.min(100, gameState.morale + change));
+                console.log(`Morale changed by ${change} to ${gameState.morale}`);
+            }
+            if (qualityMatch) {
+                const change = parseInt(qualityMatch[1]);
+                gameState.quality = Math.max(0, Math.min(100, gameState.quality + change));
+                console.log(`Quality changed by ${change} to ${gameState.quality}`);
+            }
+
+            // If no matches found, apply small random changes so metrics don't stay static
+            if (!budgetMatch && !timelineMatch && !moraleMatch && !qualityMatch) {
+                console.log("No metric changes detected in AI response, applying random variations");
+                gameState.budget = Math.max(0, Math.min(100, gameState.budget + (Math.floor(Math.random() * 11) - 5)));
+                gameState.timeline = Math.max(0, Math.min(100, gameState.timeline + (Math.floor(Math.random() * 11) - 5)));
+                gameState.morale = Math.max(0, Math.min(100, gameState.morale + (Math.floor(Math.random() * 11) - 5)));
+                gameState.quality = Math.max(0, Math.min(100, gameState.quality + (Math.floor(Math.random() * 11) - 5)));
+            }
 
             updateMetricsDisplay();
         }
